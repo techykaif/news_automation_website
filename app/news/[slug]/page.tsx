@@ -1,0 +1,133 @@
+import { notFound } from "next/navigation"
+import Link from "next/link"
+import type { Metadata } from "next"
+import { ShareButtons } from "@/components/share-buttons"
+import { NewsCard } from "@/components/news-card"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Clock, User, Calendar } from "lucide-react"
+import { getPostBySlug, getPostsByCategory } from "@/lib/google-sheets"
+
+export const revalidate = 60
+
+interface PageProps {
+  params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
+
+  if (!post) {
+    return { title: "Post Not Found | AutoBrief" }
+  }
+
+  return {
+    title: `${post.title} | AutoBrief`,
+    description: post.content.substring(0, 160),
+    openGraph: {
+      title: post.title,
+      description: post.content.substring(0, 160),
+      type: "article",
+      publishedTime: post.publishedAt,
+    },
+  }
+}
+
+export default async function NewsPostPage({ params }: PageProps) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
+
+  if (!post) {
+    notFound()
+  }
+
+  const categoryPosts = await getPostsByCategory(post.category.toLowerCase().replace(/\s+/g, "-"))
+  const relatedPosts = categoryPosts.filter((p) => p.slug !== post.slug).slice(0, 3)
+
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const paragraphs = post.content.split("\n\n").filter(Boolean)
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+  
+
+      <main className="flex-1">
+        <article className="container mx-auto px-4 py-8">
+          {/* Back link */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to news
+          </Link>
+
+          <div className="max-w-3xl mx-auto">
+            {/* Article header */}
+            <header className="mb-8 pb-8 border-b border-border">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <Badge>{post.category}</Badge>
+              </div>
+
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight text-balance mb-6">
+                {post.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                {post.author && (
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-4 h-4" />
+                    {post.author}
+                  </span>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <time dateTime={post.publishedAt}>{formattedDate}</time>
+                </span>
+                {post.readingTime && (
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4" />
+                    {post.readingTime} min read
+                  </span>
+                )}
+              </div>
+            </header>
+
+            {/* Share buttons */}
+            <div className="flex justify-end mb-8">
+              <ShareButtons title={post.title} url={`/news/${post.slug}`} />
+            </div>
+
+            {/* Article content */}
+            <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
+              {paragraphs.map((paragraph, index) => (
+                <p key={index} className="text-foreground/90 leading-relaxed mb-6 last:mb-0">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+
+            {/* Related posts */}
+            {relatedPosts.length > 0 && (
+              <section className="border-t border-border pt-8">
+                <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-primary rounded-full" />
+                  Related Articles
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {relatedPosts.map((related) => (
+                    <NewsCard key={related.id} post={related} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </article>
+      </main>
+    </div>
+  )
+}
