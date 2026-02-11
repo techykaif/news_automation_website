@@ -5,6 +5,11 @@ import { getWriteAccessToken } from "../googleSheets"
 const parser = new Parser()
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!
 
+if (!SHEET_ID) {
+  console.error("Missing GOOGLE_SHEET_ID")
+  process.exit(1)
+}
+
 /* =========================
    ID HELPERS
    ========================= */
@@ -42,19 +47,15 @@ async function fetchSheet(range: string): Promise<any[][]> {
 }
 
 async function appendRows(rows: any[][]) {
-  // 🛡 FINAL SAFETY FILTER (never insert broken rows)
   const cleanRows = rows.filter(
     r =>
       typeof r[2] === "string" &&
-      r[2].trim().length >= 5 && // title
+      r[2].trim().length >= 5 &&
       typeof r[3] === "string" &&
-      r[3].startsWith("http") // url
+      r[3].startsWith("http")
   )
 
-  if (!cleanRows.length) {
-    console.log("⚠️ No valid rows to insert")
-    return
-  }
+  if (!cleanRows.length) return
 
   const token = await getWriteAccessToken()
 
@@ -70,7 +71,12 @@ async function appendRows(rows: any[][]) {
     }
   )
 
-  console.log("🟢 Rows inserted:", cleanRows.length, "| Status:", res.status)
+  if (!res.ok) {
+    console.error("Failed to append rows:", await res.text())
+    return
+  }
+
+  console.log(`Inserted ${cleanRows.length} new rows`)
 }
 
 /* =========================
@@ -78,11 +84,12 @@ async function appendRows(rows: any[][]) {
    ========================= */
 
 export async function runRssScraper() {
-  console.log("🚀 RSS scraper started")
-
   const sources = await fetchSheet("SOURCES!A2:E")
+
   const existingUrls = new Set(
-    (await fetchSheet("RAW_NEWS!D2:D")).flat().map(v => String(v).trim())
+    (await fetchSheet("RAW_NEWS!D2:D"))
+      .flat()
+      .map(v => String(v).trim())
   )
 
   const idRows = await fetchSheet("RAW_NEWS!A2:A")
@@ -119,7 +126,6 @@ export async function runRssScraper() {
             ? item.contentSnippet.trim()
             : ""
 
-        // 🚫 HARD RULES (URL-only items die here)
         if (title.length < 5) continue
         if (!link.startsWith("http")) continue
         if (existingUrls.has(link)) continue
@@ -141,12 +147,11 @@ export async function runRssScraper() {
         existingUrls.add(link)
       }
     } catch (err) {
-      console.error(`❌ Failed RSS: ${sourceName}`, err)
+      console.error(`RSS fetch failed for ${sourceName}`)
     }
   }
 
   await appendRows(rowsToInsert)
-  console.log("🏁 RSS scraper finished")
 }
 
 runRssScraper()
