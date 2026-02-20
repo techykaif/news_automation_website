@@ -1,5 +1,4 @@
-
-import { NewsCard } from "@/components/news-card"
+import { InfiniteNews } from "@/components/infinite-news"
 import { FeaturedSection } from "@/components/featured-section"
 import { CategoryFilter } from "@/components/category-filter"
 import { getPublishedPosts, getCategories, getFeaturedPosts } from "@/lib/data-source"
@@ -7,7 +6,6 @@ import { getPublishedPosts, getCategories, getFeaturedPosts } from "@/lib/data-s
 export const revalidate = 60
 
 export default async function HomePage() {
-
   const PAGE = 1
   const LIMIT = 18
 
@@ -25,18 +23,21 @@ export default async function HomePage() {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
 
+          {/* Featured Section */}
           {featuredPosts.length > 0 && (
             <div className="mb-10">
               <FeaturedSection posts={featuredPosts} />
             </div>
           )}
 
+          {/* Category Filter */}
           {categories.length > 0 && (
             <div className="mb-8">
               <CategoryFilter categories={categories} />
             </div>
           )}
 
+          {/* Latest News */}
           <section>
             <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full" />
@@ -48,11 +49,7 @@ export default async function HomePage() {
                 No news articles available at the moment.
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {regularPosts.map((post) => (
-                  <NewsCard key={post.id} post={post} />
-                ))}
-              </div>
+              <InfiniteNews initialPosts={regularPosts} />
             )}
           </section>
 
