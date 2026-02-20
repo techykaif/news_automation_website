@@ -5,7 +5,7 @@ import { ShareButtons } from "@/components/share-buttons"
 import { NewsCard } from "@/components/news-card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Clock, User, Calendar } from "lucide-react"
-import { getPostBySlug, getPostsByCategory } from "@/lib/google-sheets"
+import { getPostBySlug, getPostsByCategory, getPublishedPosts } from "@/lib/data-source"
 
 export const revalidate = 60
 

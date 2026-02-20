@@ -23,6 +23,16 @@ import type { NewsPost, Category } from "./types"
  * 16 ai_seo_title
  */
 
+/* =========================
+   GLOBAL CACHE (DATASET)
+   ========================= */
+let cachedPosts: NewsPost[] | null = null
+let cacheTimestamp = 0
+const CACHE_DURATION = 60 * 1000 // 60 seconds
+
+/* =========================
+   TOKEN CACHE
+   ========================= */
 let cachedToken: string | null = null
 let tokenExpiry = 0
 
@@ -56,7 +66,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 /* =========================
-   FETCH DATA
+   FETCH SHEET DATA
    ========================= */
 async function fetchSheetData(range: string): Promise<any[][]> {
   const token = await getAccessToken()
@@ -93,7 +103,6 @@ function rowToPost(row: any[]): NewsPost {
   const aiTitle = String(row[16] || "").trim()
   const aiContent = String(row[15] || "").trim()
 
-  // 🔐 STRICT AI GATE
   const finalTitle =
     status === "LIVE" && aiTitle ? aiTitle : titleBase
 
@@ -116,47 +125,57 @@ function rowToPost(row: any[]): NewsPost {
   }
 }
 
+/* =========================
+   INTERNAL: BUILD FULL DATASET (CACHED)
+   ========================= */
+async function getAllPublishedPosts(): Promise<NewsPost[]> {
+  const now = Date.now()
+
+  if (cachedPosts && now - cacheTimestamp < CACHE_DURATION) {
+    return cachedPosts
+  }
+
+  const rows = await fetchSheetData("FINAL_BLOGS!A2:Q")
+
+  const posts = rows
+    .filter(row => {
+      const isPublished =
+        row[9] === true || String(row[9]).toUpperCase() === "TRUE"
+
+      const status = String(row[13]).toUpperCase()
+
+      return isPublished && (status === "LIVE" || status === "READY")
+    })
+    .map(rowToPost)
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() -
+        new Date(a.publishedAt).getTime()
+    )
+
+  cachedPosts = posts
+  cacheTimestamp = now
+
+  return posts
+}
 
 /* =========================
-   GET PUBLISHED POSTS
+   PUBLIC: PAGINATED POSTS
    ========================= */
-export async function getPublishedPosts(): Promise<NewsPost[]> {
-  try {
-    const rows = await fetchSheetData("FINAL_BLOGS!A2:Q")
-
-    return rows
-      .filter(row => {
-  const isPublished =
-    row[9] === true || String(row[9]).toUpperCase() === "TRUE"
-
-  const status = String(row[13]).toUpperCase()
-
-  // Primary: LIVE posts
-  if (isPublished && status === "LIVE") return true
-
-  // Fallback: READY but already published
-  if (isPublished && status === "READY") return true
-
-  return false
-})
-
-      .map(rowToPost)
-      .sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() -
-          new Date(a.publishedAt).getTime()
-      )
-  } catch (err) {
-    console.error("❌ Sheets fetch error:", err)
-    return []
-  }
+export async function getPublishedPosts(
+  page = 1,
+  limit = 20
+): Promise<NewsPost[]> {
+  const posts = await getAllPublishedPosts()
+  const start = (page - 1) * limit
+  return posts.slice(start, start + limit)
 }
 
 /* =========================
    SINGLE POST
    ========================= */
 export async function getPostBySlug(slug: string) {
-  const posts = await getPublishedPosts()
+  const posts = await getAllPublishedPosts()
   return posts.find(p => p.slug === slug) || null
 }
 
@@ -164,7 +183,7 @@ export async function getPostBySlug(slug: string) {
    CATEGORY FILTER
    ========================= */
 export async function getPostsByCategory(category: string) {
-  const posts = await getPublishedPosts()
+  const posts = await getAllPublishedPosts()
   return posts.filter(
     p => p.category.toLowerCase() === category.toLowerCase()
   )
@@ -174,7 +193,7 @@ export async function getPostsByCategory(category: string) {
    CATEGORIES
    ========================= */
 export async function getCategories(): Promise<Category[]> {
-  const posts = await getPublishedPosts()
+  const posts = await getAllPublishedPosts()
   const map = new Map<string, number>()
 
   posts.forEach(p => {
@@ -192,7 +211,7 @@ export async function getCategories(): Promise<Category[]> {
    FEATURED
    ========================= */
 export async function getFeaturedPosts() {
-  const posts = await getPublishedPosts()
+  const posts = await getAllPublishedPosts()
   return posts.filter(p => p.isFeatured).slice(0, 3)
 }
 
@@ -200,7 +219,7 @@ export async function getFeaturedPosts() {
    BREAKING
    ========================= */
 export async function getBreakingNews() {
-  const posts = await getPublishedPosts()
+  const posts = await getAllPublishedPosts()
   return posts[0] || null
 }
 
@@ -210,14 +229,20 @@ export async function getBreakingNews() {
 export async function searchPosts(query: string) {
   if (!query?.trim()) return []
 
-  const q = query.toLowerCase()
-  const posts = await getPublishedPosts()
+  const q = query.trim().toLowerCase()
+  const posts = await getAllPublishedPosts()
 
-  return posts.filter(
-    p =>
-      p.title.toLowerCase().includes(q) ||
-      p.content.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      (p.author || "").toLowerCase().includes(q)
-  )
+  return posts.filter(p => {
+    const title = (p.title || "").toLowerCase()
+    const content = (p.content || "").toLowerCase()
+    const category = (p.category || "").toLowerCase()
+    const author = (p.author || "").toLowerCase()
+
+    return (
+      title.includes(q) ||
+      content.includes(q) ||
+      category.includes(q) ||
+      author.includes(q)
+    )
+  })
 }
