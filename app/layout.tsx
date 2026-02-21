@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "AutoBrief - Automated News Aggregation",
   description:
     "Stay informed with AutoBrief - automated news aggregation and publishing. Curated, timely articles across technology, science, finance, and more.",
-  generator: "v0.app",
+  generator: undefined,
   keywords: ["news", "automation", "technology", "science", "finance", "current events", "autobrief"],
   icons: {
     icon: [
