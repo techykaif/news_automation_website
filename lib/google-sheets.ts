@@ -80,7 +80,7 @@ async function fetchSheetData(range: string): Promise<any[][]> {
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+    next: { revalidate: 60 }, // 🔥 IMPORTANT FIX
   })
 
   if (!res.ok) {
@@ -90,7 +90,6 @@ async function fetchSheetData(range: string): Promise<any[][]> {
   const data = await res.json()
   return data.values || []
 }
-
 /* =========================
    ROW → POST
    ========================= */
@@ -117,7 +116,7 @@ function rowToPost(row: any[]): NewsPost {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, ""),
     content: finalContent,
-    category: row[6],
+    category: String(row[6] || "").trim(),
     publishedAt: row[8] || new Date().toISOString(),
     author: row[7],
     isFeatured:
@@ -182,13 +181,14 @@ export async function getPostBySlug(slug: string) {
 /* =========================
    CATEGORY FILTER
    ========================= */
-export async function getPostsByCategory(category: string) {
+export async function getPostsByCategory(categorySlug: string) {
   const posts = await getAllPublishedPosts()
-  return posts.filter(
-    p => p.category.toLowerCase() === category.toLowerCase()
-  )
-}
 
+  return posts.filter((p) => {
+    if (!p.category) return false
+    return p.category.toLowerCase() === categorySlug
+  })
+}
 /* =========================
    CATEGORIES
    ========================= */
@@ -196,13 +196,21 @@ export async function getCategories(): Promise<Category[]> {
   const posts = await getAllPublishedPosts()
   const map = new Map<string, number>()
 
-  posts.forEach(p => {
-    map.set(p.category, (map.get(p.category) || 0) + 1)
+  posts.forEach((p) => {
+    if (!p.category) return
+
+    const categoryName = String(p.category).trim()
+    if (!categoryName) return
+
+    map.set(categoryName, (map.get(categoryName) || 0) + 1)
   })
 
   return Array.from(map.entries()).map(([name, count]) => ({
     name,
-    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    slug: name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-"),
     count,
   }))
 }
@@ -245,4 +253,10 @@ export async function searchPosts(query: string) {
       author.includes(q)
     )
   })
+}
+/* =========================
+   GET ALL POSTS
+   ========================= */
+   export async function getAllPosts() {
+  return getAllPublishedPosts()
 }

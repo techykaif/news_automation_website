@@ -6,8 +6,12 @@ import type { Metadata } from "next"
 import { ShareButtons } from "@/components/share-buttons"
 import { NewsCard } from "@/components/news-card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Clock, User, Calendar } from "lucide-react"
-import { getPostBySlug, getPostsByCategory } from "@/lib/data-source"
+import { ArrowLeft, User, Calendar } from "lucide-react"
+import {
+  getPostBySlug,
+  getPostsByCategory,
+  getAllPosts,
+} from "@/lib/data-source"
 
 export const revalidate = 60
 
@@ -16,9 +20,23 @@ interface PageProps {
 }
 
 /* =========================
+   STATIC PARAMS
+   ========================= */
+export async function generateStaticParams() {
+  const posts = await getAllPosts()
+
+  return posts.map((post) => ({
+    slug: post.slug,
+  }))
+}
+
+/* =========================
    METADATA
    ========================= */
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: PageProps
+): Promise<Metadata> {
+
   const { slug } = await params
   const post = await getPostBySlug(slug)
 
@@ -26,14 +44,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "Post Not Found | AutoBrief" }
   }
 
+  const description = post.content.substring(0, 160)
+
   return {
     title: `${post.title} | AutoBrief`,
-    description: post.content.substring(0, 160),
+    description,
+    alternates: {
+      canonical: `/news/${post.slug}`,
+    },
     openGraph: {
       title: post.title,
-      description: post.content.substring(0, 160),
+      description,
+      url: `/news/${post.slug}`,
       type: "article",
       publishedTime: post.publishedAt,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
     },
   }
 }
@@ -42,6 +71,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
    PAGE
    ========================= */
 export default async function NewsPostPage({ params }: PageProps) {
+
   const { slug } = await params
   const post = await getPostBySlug(slug)
 
@@ -54,18 +84,46 @@ export default async function NewsPostPage({ params }: PageProps) {
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3)
 
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString(
+    "en-US",
+    { year: "numeric", month: "long", day: "numeric" }
+  )
 
   const paragraphs = post.content.split("\n\n").filter(Boolean)
+
+  /* Structured Data (SEO Boost) */
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: post.title,
+    datePublished: post.publishedAt,
+    author: {
+      "@type": "Person",
+      name: post.author || "AutoBrief",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "AutoBrief",
+    },
+    description: post.content.substring(0, 160),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://autobrief-ai.netlify.app/news/${post.slug}`,
+    },
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
         <article className="container mx-auto px-4 py-8">
+
+          {/* JSON-LD Structured Data */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(structuredData),
+            }}
+          />
 
           <Link
             href="/"
@@ -96,13 +154,18 @@ export default async function NewsPostPage({ params }: PageProps) {
 
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  <time dateTime={post.publishedAt}>{formattedDate}</time>
+                  <time dateTime={post.publishedAt}>
+                    {formattedDate}
+                  </time>
                 </span>
               </div>
             </header>
 
             <div className="flex justify-end mb-8">
-              <ShareButtons title={post.title} url={`/news/${post.slug}`} />
+              <ShareButtons
+                title={post.title}
+                url={`/news/${post.slug}`}
+              />
             </div>
 
             <div className="prose prose-lg dark:prose-invert max-w-none mb-12">

@@ -18,3 +18,4 @@ export const getCategories = service.getCategories
 export const getFeaturedPosts = service.getFeaturedPosts
 export const getBreakingNews = service.getBreakingNews
 export const searchPosts = service.searchPosts
+export const getAllPosts = service.getAllPosts
