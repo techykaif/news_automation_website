@@ -139,3 +139,24 @@
 .animate-fadeIn {
   animation: fadeIn 0.4s ease forwards;
 }
+@layer components {
+  .prose {
+    max-width: 75ch;
+  }
+
+  .prose h2 {
+    @apply mt-10 mb-4 text-2xl font-semibold;
+  }
+
+  .prose h3 {
+    @apply mt-8 mb-3 text-xl font-semibold;
+  }
+
+  .prose p {
+    @apply mb-6;
+  }
+
+  .prose a {
+    @apply text-primary font-medium;
+  }
+}

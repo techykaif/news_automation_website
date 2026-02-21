@@ -123,3 +123,28 @@
     @apply bg-background text-foreground;
   }
 }
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  p {
+    line-height: 1.75;
+  }
+
+  h1, h2, h3, h4 {
+    line-height: 1.25;
+  }
+
+  a {
+    @apply underline-offset-4 transition-colors;
+  }
+
+  a:hover {
+    @apply text-primary;
+  }
+}
