@@ -1,8 +1,10 @@
+/* /categories/page.tsx */
+
 import Link from "next/link"
 import type { Metadata } from "next"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Folder } from "lucide-react"
-import { getCategories } from "@/lib/google-sheets"
+import { getCategories } from "@/lib/data-source"
 
 export const revalidate = 60
 

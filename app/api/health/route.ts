@@ -1,3 +1,5 @@
+/* /api/health/route.ts */
+
 import { NextResponse } from "next/server"
 import type { HealthResponse } from "@/lib/types"
 

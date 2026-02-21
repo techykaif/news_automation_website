@@ -1,8 +1,10 @@
+/* /category/[slug]/page.tsx */
+
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { NewsCard } from "@/components/news-card"
 import { CategoryFilter } from "@/components/category-filter"
-import { getPostsByCategory, getCategories } from "@/lib/google-sheets"
+import { getPostsByCategory, getCategories } from "@/lib/data-source"
 
 export const revalidate = 60
 

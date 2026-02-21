@@ -1,6 +1,8 @@
+/* api/news/route.ts */
+
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getPublishedPosts, getPostsByCategory } from "@/lib/google-sheets"
+import { getPublishedPosts, getPostsByCategory } from "@/lib/data-source"
 
 export const runtime = "nodejs"
 

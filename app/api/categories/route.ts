@@ -1,5 +1,7 @@
+/* /api/categories/route.ts */
+
 import { NextResponse } from "next/server"
-import { getCategories } from "@/lib/google-sheets"
+import { getCategories } from "@/lib/data-source"
 
 export const runtime = "nodejs"
 

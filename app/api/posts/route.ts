@@ -1,3 +1,5 @@
+/* /api/posts/route.ts */
+
 import { NextRequest, NextResponse } from "next/server"
 import { getPublishedPosts } from "@/lib/data-source"
 

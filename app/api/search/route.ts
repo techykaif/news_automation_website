@@ -1,5 +1,7 @@
+/* /api/search/route.ts */
+
 import { type NextRequest, NextResponse } from "next/server"
-import { searchPosts } from "@/lib/google-sheets"
+import { searchPosts } from "@/lib/data-source"
 
 export const runtime = "nodejs"
 

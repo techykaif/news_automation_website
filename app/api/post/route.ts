@@ -1,6 +1,8 @@
+/* /api/post/route.ts */
+
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getPostBySlug } from "@/lib/google-sheets"
+import { getPostBySlug } from "@/lib/data-source"
 
 export const runtime = "nodejs"
 
